@@ -58,6 +58,7 @@ interface Food {
   image_url: string;
   formattedPrice: string;
   extras: Extra[];
+  isFavorite: boolean;
 }
 
 const FoodDetails: React.FC = () => {
@@ -73,12 +74,23 @@ const FoodDetails: React.FC = () => {
 
   useEffect(() => {
     async function loadFood(): Promise<void> {
-      const response = await api.get(`foods/${routeParams.id}`);
-      setFood(response.data);
-      const setQuantitity = response.data.extras.map((extra: Extra) =>
-        Object.assign(extra, { quantity: 0 }),
+      // Load a specific food with extras based on routeParams id
+      const response = await api.get(`/foods/${routeParams.id}`);
+
+      const foodData = {
+        ...response.data,
+        formattedPrice: formatValue(response.data.price),
+      } as Food;
+
+      const extrasData = response.data.extras.map(
+        (extra: Omit<Extra, 'quantity'>) => ({
+          ...extra,
+          quantity: 0,
+        }),
       );
-      setExtras(setQuantitity);
+
+      setFood(foodData);
+      setExtras(extrasData);
     }
 
     loadFood();
@@ -115,24 +127,36 @@ const FoodDetails: React.FC = () => {
   }
 
   function handleDecrementFood(): void {
-    if (foodQuantity > 0) {
-      setFoodQuantity(foodQuantity - 1);
-    }
+    setFoodQuantity(state => (state === 1 ? 1 : state - 1));
   }
 
-  const toggleFavorite = useCallback(() => {
-    // Toggle if food is favorite or not
-  }, [isFavorite, food]);
+  const toggleFavorite = useCallback(async () => {
+    if (isFavorite) {
+      await api.delete(`/favorites/${food.id}`);
+    } else {
+      await api.post(`/favorites`, food);
+    }
+    setIsFavorite(state => !state);
+  }, [food, isFavorite]);
 
   const cartTotal = useMemo(() => {
-    const a = extras
+    const total = extras
       .map(extra => extra.quantity * extra.value)
       .reduce((sum, qtd) => (sum += qtd), 0);
-    return food.price * foodQuantity + a;
+    return formatValue(food.price * foodQuantity + foodQuantity * total);
   }, [extras, food, foodQuantity]);
 
   async function handleFinishOrder(): Promise<void> {
-    // Finish the order and save on the API
+    const data = {
+      ...food,
+      ...extras,
+      product_id: food.id,
+    };
+
+    delete data.id;
+
+    await api.post('/orders', data);
+    navigation.navigate('DashboardStack');
   }
 
   // Calculate the correct icon name
