@@ -43,7 +43,7 @@ const Orders: React.FC = () => {
     const value = orders.map(
       order => order.price * order.extras.value * order.extras.quantity,
     );
-  }, []);
+  }, [orders]);
 
   return (
     <Container>

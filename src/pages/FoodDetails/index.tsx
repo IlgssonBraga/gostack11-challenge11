@@ -147,15 +147,13 @@ const FoodDetails: React.FC = () => {
   }, [extras, food, foodQuantity]);
 
   async function handleFinishOrder(): Promise<void> {
-    const data = {
+    const newOrder = {
       ...food,
       ...extras,
       product_id: food.id,
     };
-
-    delete data.id;
-
-    await api.post('/orders', data);
+    delete newOrder.id;
+    await api.post('/orders', newOrder);
     navigation.navigate('DashboardStack');
   }
 
